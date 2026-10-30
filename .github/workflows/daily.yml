@@ -1,0 +1,46 @@
+name: Make MindMysteries Short
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 14 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  make-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          pip install -r requirements.txt
+
+      - name: Make video
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+        run: python main.py
+
+      - name: Save video (download from Actions page)
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-video
+          path: output/
+
+      - name: Remember used topics
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add used_topics.json
+          git commit -m "update used topics" || echo "nothing to commit"
+          git push
